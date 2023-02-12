@@ -8,9 +8,6 @@ import sqlite3
 
 URL = "https://programmer100.pythonanywhere.com/tours/"
 
-# Establist a connection
-connection = sqlite3.connect("data_db.db")
-
 
 class Event:
     def scrape(self, url):
@@ -41,21 +38,28 @@ class Email:
             server.sendmail(username, reciever, message)
 
 
-def store(extracted):
-    row = extracted.split(",")
-    row = [item.strip() for item in row]
-    cursor = connection.cursor()
-    cursor.execute("INSERT INTO events VALUES(?,?,?)", row)
-    connection.commit()
+class Database:
 
-def read(extracted):
-    row = extracted.split(",")
-    row = [item.strip() for item in row]
-    band, city, date = row
-    cursor = connection.cursor()
-    cursor.execute("SELECT * from events WHERE band=? AND City=? AND Date=?", (band, city, date))
-    rows = cursor.fetchall()
-    return rows
+    def __init__(self, database_path):
+        # Establist a connection
+        self.connection = sqlite3.connect(database_path)
+        
+    def store(self, extracted):
+        row = extracted.split(",")
+        row = [item.strip() for item in row]
+        cursor = self.connection.cursor()
+        cursor.execute("INSERT INTO events VALUES(?,?,?)", row)
+        self.connection.commit()
+
+    def read(self, extracted):
+        row = extracted.split(",")
+        row = [item.strip() for item in row]
+        band, city, date = row
+        cursor = self.connection.cursor()
+        cursor.execute("SELECT * from events WHERE band=? AND City=? AND Date=?", (band, city, date))
+        rows = cursor.fetchall()
+        return rows
+
 
 if __name__ == "__main__":
     while True:
@@ -65,9 +69,10 @@ if __name__ == "__main__":
         print(extracted)
 
         if extracted != "No upcoming tours":
-            row = read(extracted)
+            database = Database(database_path="data_db.db")
+            row = database.read(extracted)
             if not row:
-                store(extracted)
+                database.store(extracted)
                 email = Email()
                 email.send_email(message="Hey, new event was found!")
 
